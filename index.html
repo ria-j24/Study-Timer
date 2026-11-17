@@ -1,0 +1,118 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>HSC Study Stopwatch</title>
+<style>
+  :root { --bg: #ffffff; --card: #f7f7f5; --text: #37352f; --muted: #787774; --border: #e9e9e7; --accent: #2eaadc; }
+  @media (prefers-color-scheme: dark) {
+    :root { --bg: #191919; --card: #202020; --text: #ffffffcf; --muted: #9b9b9b; --border: #2f2f2f; --accent: #2eaadc; }
+  }
+  * { box-sizing: border-box; font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Helvetica, Arial, sans-serif; }
+  body { background: var(--bg); color: var(--text); margin: 0; padding: 16px; display: flex; justify-content: center; }
+  .box { width: 100%; max-width: 420px; background: var(--card); border: 1px solid var(--border); border-radius: 10px; padding: 18px; }
+  select, button { width: 100%; padding: 10px; border-radius: 6px; border: 1px solid var(--border); font-size: 14px; background: var(--bg); color: var(--text); }
+  .timer { font-size: 42px; font-weight: 700; text-align: center; margin: 18px 0; font-variant-numeric: tabular-nums; }
+  .btns { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 8px; margin-bottom: 18px; }
+  button { cursor: pointer; font-weight: 600; transition: 0.15s; }
+  button:hover { opacity: 0.85; }
+  .start { background: var(--accent); color: #fff; border: none; }
+  .log { background: #2ecc71; color: #fff; border: none; }
+  .header { display: flex; justify-content: space-between; align-items: center; border-top: 1px solid var(--border); padding-top: 12px; margin-bottom: 8px; font-size: 13px; color: var(--muted); }
+  .reset-link { background: none; border: none; color: var(--muted); text-decoration: underline; width: auto; padding: 0; font-size: 12px; }
+  .row { display: flex; justify-content: space-between; padding: 6px 0; font-size: 14px; border-bottom: 1px solid var(--border); }
+  .row:last-child { border-bottom: none; }
+</style>
+</head>
+<body>
+<div class="box">
+  <select id="subject">
+    <option value="Maths Adv">Maths Adv</option>
+    <option value="Maths Ext 1">Maths Ext 1</option>
+    <option value="English Adv">English Adv</option>
+    <option value="English Ext 1">English Ext 1</option>
+    <option value="Chemistry">Chemistry</option>
+    <option value="Biology">Biology</option>
+  </select>
+
+  <div class="timer" id="display">00:00:00</div>
+
+  <div class="btns">
+    <button class="start" id="toggleBtn" onclick="toggleTimer()">Start</button>
+    <button class="log" onclick="logSession()">Log Time</button>
+    <button onclick="resetTimer()">Reset</button>
+  </div>
+
+  <div class="header">
+    <span id="dateLabel">Today's Hours</span>
+    <button class="reset-link" onclick="clearTotals()">Clear Totals</button>
+  </div>
+  <div id="totals"></div>
+</div>
+
+<script>
+  const subjects = ["Maths Adv", "Maths Ext 1", "English Adv", "English Ext 1", "Chemistry", "Biology"];
+  let seconds = 0, timer = null;
+  const today = new Date().toLocaleDateString();
+
+  function getSaved() {
+    const saved = JSON.parse(localStorage.getItem("hscStudy") || "{}");
+    if (saved.date !== today) return { date: today, data: {} };
+    return saved;
+  }
+
+  function saveTotals(data) {
+    localStorage.setItem("hscStudy", JSON.stringify({ date: today, data }));
+    render();
+  }
+
+  function formatTime(s) {
+    const h = String(Math.floor(s / 3600)).padStart(2, '0');
+    const m = String(Math.floor((s % 3600) / 60)).padStart(2, '0');
+    const sec = String(s % 60).padStart(2, '0');
+    return `${h}:${m}:${sec}`;
+  }
+
+  function toggleTimer() {
+    const btn = document.getElementById("toggleBtn");
+    if (timer) {
+      clearInterval(timer); timer = null; btn.textContent = "Start";
+    } else {
+      timer = setInterval(() => { seconds++; document.getElementById("display").textContent = formatTime(seconds); }, 1000);
+      btn.textContent = "Pause";
+    }
+  }
+
+  function resetTimer() {
+    clearInterval(timer); timer = null; seconds = 0;
+    document.getElementById("display").textContent = "00:00:00";
+    document.getElementById("toggleBtn").textContent = "Start";
+  }
+
+  function logSession() {
+    if (seconds === 0) return;
+    const sub = document.getElementById("subject").value;
+    const store = getSaved();
+    store.data[sub] = (store.data[sub] || 0) + seconds;
+    saveTotals(store.data);
+    resetTimer();
+  }
+
+  function clearTotals() {
+    saveTotals({});
+  }
+
+  function render() {
+    const store = getSaved();
+    const container = document.getElementById("totals");
+    container.innerHTML = subjects.map(sub => {
+      const hrs = ((store.data[sub] || 0) / 3600).toFixed(2);
+      return `<div class="row"><span>${sub}</span><strong>${hrs} hrs</strong></div>`;
+    }).join("");
+  }
+
+  render();
+</script>
+</body>
+</html>
